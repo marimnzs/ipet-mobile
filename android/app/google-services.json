@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "826943175837",
+    "firebase_url": "https://ipet-tcc-5cd87-default-rtdb.firebaseio.com",
+    "project_id": "ipet-tcc-5cd87",
+    "storage_bucket": "ipet-tcc-5cd87.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:826943175837:android:bd51b46a1749f10a83e874",
+        "android_client_info": {
+          "package_name": "com.ipetmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOACip41WVHt7rQmJAzk9h1CJIqUxCsDo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
