@@ -35,8 +35,6 @@ export function MyLocalization({navigation}: MyLocalizationProps) {
   const [longitude, setLongitude] = useState(0);
   const {user} = useAuthContext();
 
-  console.log(user?.uid);
-
   function getMyLocation() {
     Geolocation.getCurrentPosition(
       info => {
@@ -70,7 +68,9 @@ export function MyLocalization({navigation}: MyLocalizationProps) {
         return;
       }
 
-      const novoEnderecoRef = push(ref(db, 'enderecos'));
+      const novoEnderecoRef = push(
+        ref(db, 'IpetClientsMobile/' + user?.uid + '/enderecos'),
+      );
 
       const novoEnderecoData = {
         rua,
@@ -99,6 +99,7 @@ export function MyLocalization({navigation}: MyLocalizationProps) {
           width="100%"
           paddingBottom="4">
           <Header />
+
           <GooglePlacesAutocomplete
             minLength={2}
             placeholder="Procure um endereço"
@@ -118,7 +119,7 @@ export function MyLocalization({navigation}: MyLocalizationProps) {
             }}
             query={{
               language: 'en',
-              key: '',
+              key: 'AIzaSyB8IQHsBoP6doFKZ-dXZGKOp3tCm1Mj2p4',
             }}
             onTimeout={console.log}
             onFail={error => console.log(error)}
@@ -158,18 +159,22 @@ export function MyLocalization({navigation}: MyLocalizationProps) {
               loadingEnabled={true}
             />
           </Box>
-          <Button
-            onPress={() => {
-              cadastrarEndereco()
-                .then(() => {
-                  navigation.navigate('Home');
-                })
-                .catch(error => {
-                  console.error(error);
-                });
-            }}>
-            Salvar endereço
-          </Button>
+          <Box position="absolute" bottom="100px" width="350px" right="6">
+            <Button
+              backgroundColor="#FC822D"
+              borderRadius="20"
+              onPress={() => {
+                cadastrarEndereco()
+                  .then(() => {
+                    navigation.navigate('Home');
+                  })
+                  .catch(error => {
+                    console.error(error);
+                  });
+              }}>
+              Salvar endereço
+            </Button>
+          </Box>
           <Box alignItems="center">
             <Box position="absolute" bottom="2" width="350px">
               <MenuProfile navigation={navigation} />

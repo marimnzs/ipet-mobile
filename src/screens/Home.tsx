@@ -6,7 +6,6 @@ import {db} from '../firebase';
 import {Header} from '../components/Header';
 import {MenuProfile} from '../components/MenuProfile';
 import {NavigationProp, ParamListBase} from '@react-navigation/native';
-import {useStore} from '../contexts/StoreContext';
 
 interface HomeProps {
   navigation: NavigationProp<ParamListBase>;
@@ -19,61 +18,31 @@ interface Cliente {
 
 export function Home({navigation}: HomeProps) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const {setStore} = useStore();
 
   useEffect(() => {
-    const clientesRef = ref(db, 'IpetClientsWeb');
+    const fetchClientes = async () => {
+      try {
+        const clientesRef = ref(db, 'IpetClientsWeb');
+        const snapshot = await get(clientesRef);
 
-    get(clientesRef)
-      .then(snapshot => {
         if (snapshot.exists()) {
           const data: Record<string, Cliente> = snapshot.val();
           const listaDeClientes = Object.values(data);
-
-          // Atualize o contexto usando a função de estado correta
-          setStore(
-            prevStore =>
-              ({
-                ...prevStore,
-                cliente: listaDeClientes,
-              } as StoreData),
-          );
-          // Atualize também o estado local
-          setClientes(listaDeClientes);
-        } else {
-          console.log('Nenhum cliente encontrado.');
-        }
-      })
-      .catch(error => {
-        console.error('Erro ao buscar clientes:', error);
-      });
-  }, [setStore]);
-
-  useEffect(() => {
-    const clientesRef = ref(db, 'IpetClientsWeb');
-
-    get(clientesRef)
-      .then(snapshot => {
-        if (snapshot.exists()) {
-          const data: Record<string, Cliente> = snapshot.val();
-          const listaDeClientes = Object.values(data);
-
-          const agendaId = Object.keys(listaDeClientes[0].agenda)[0];
-          const result = listaDeClientes[0].agenda[agendaId]
-          console.log(result);
 
           setClientes(listaDeClientes);
         } else {
           console.log('Nenhum cliente encontrado.');
         }
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Erro ao buscar clientes:', error);
-      });
+      }
+    };
+
+    fetchClientes();
   }, []);
 
   const handleAgendarClick = cliente => {
-    console.log(cliente)
+    console.log(cliente);
     navigation.navigate('StoreProfile', {
       petshopData: cliente,
     });

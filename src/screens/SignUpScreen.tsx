@@ -3,6 +3,8 @@ import {View} from 'react-native';
 import auth from '@react-native-firebase/auth';
 import {Button, Input, Box, Text, Link} from 'native-base';
 import {NavigationProp, ParamListBase} from '@react-navigation/native';
+import {ref, set} from 'firebase/database';
+import {db} from '../firebase';
 
 interface SignUpScreenProps {
   navigation: NavigationProp<ParamListBase>;
@@ -11,23 +13,38 @@ interface SignUpScreenProps {
 export function SignUpScreen({navigation}: SignUpScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [document, setDocument] = useState('');
 
   function signUp() {
+    if (!email || !password || !name || !document) {
+      console.log('Por favor, preencha todos os campos.');
+      return;
+    }
+
     auth()
       .createUserWithEmailAndPassword(email, password)
+      .then(userCredential => {
+        const user = userCredential.user;
+        return set(ref(db, 'IpetClientsMobile/' + user.uid), {
+          userId: user.uid,
+          document: document,
+          email: email,
+          name: name,
+        });
+      })
       .then(() => {
-        console.log('User account created & signed in!');
+        console.log('Dados do usuário adicionados ao banco de dados!');
         navigation.navigate('MyLocalization');
       })
       .catch(error => {
         if (error.code === 'auth/email-already-in-use') {
-          console.log('That email address is already in use!');
+          console.log('Este endereço de e-mail já está em uso!');
+        } else if (error.code === 'auth/invalid-email') {
+          console.log('Endereço de e-mail inválido!');
+        } else {
+          console.error(error);
         }
-
-        if (error.code === 'auth/invalid-email') {
-        }
-
-        console.error(error);
       });
   }
 
@@ -55,7 +72,18 @@ export function SignUpScreen({navigation}: SignUpScreenProps) {
           onChangeText={setPassword}
           marginTop="2"
         />
-
+        <Input
+          placeholder="nome"
+          value={name}
+          onChangeText={setName}
+          marginTop="2"
+        />
+        <Input
+          placeholder="CPF"
+          value={document}
+          onChangeText={setDocument}
+          marginTop="2"
+        />
         <Button
           onPress={signUp}
           borderRadius="8"
