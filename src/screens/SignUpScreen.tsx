@@ -5,6 +5,7 @@ import {Button, Input, Box, Text, Link} from 'native-base';
 import {NavigationProp, ParamListBase} from '@react-navigation/native';
 import {ref, set} from 'firebase/database';
 import {db} from '../firebase';
+import {maskCpf} from '../utils/masks';
 
 interface SignUpScreenProps {
   navigation: NavigationProp<ParamListBase>;
@@ -80,7 +81,7 @@ export function SignUpScreen({navigation}: SignUpScreenProps) {
         />
         <Input
           placeholder="CPF"
-          value={document}
+          value={maskCpf(document)}
           onChangeText={setDocument}
           marginTop="2"
         />

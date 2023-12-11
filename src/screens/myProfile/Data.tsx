@@ -7,6 +7,7 @@ import {View, SafeAreaView} from 'react-native';
 import {ref, set, get} from 'firebase/database';
 import {db} from '../../firebase';
 import {useAuthContext} from '../../contexts/AuthContext';
+import {maskCpf} from '../../utils/masks';
 
 interface DataProps {
   navigation: NavigationProp<ParamListBase>;
@@ -101,7 +102,7 @@ export function Data({navigation}: DataProps) {
                   type="text"
                   placeholder="CPF"
                   width="350px"
-                  value={document}
+                  value={maskCpf(document)}
                   onChangeText={setDocument}
                 />
               </Stack>

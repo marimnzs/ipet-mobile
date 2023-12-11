@@ -50,8 +50,7 @@ export function Profile({navigation}: ProfileProps) {
               alignItems="center"
               borderColor="#565656"
               borderWidth="0.5"
-              paddingY="2"
-              marginBottom="4">
+              paddingY="2">
               <Box marginLeft="4">
                 <Feather name="map-pin" size={30} color="#565656" />
               </Box>
@@ -60,6 +59,28 @@ export function Profile({navigation}: ProfileProps) {
                   Endereços
                 </Text>
                 <Text>Meus endereços cadastrados</Text>
+              </Box>
+            </Flex>
+          </Pressable>
+          <Pressable
+            width="100%"
+            onPress={() => navigation?.navigate('Historic')}>
+            <Flex
+              flexDirection="row"
+              width="100%"
+              alignItems="center"
+              borderColor="#565656"
+              borderWidth="0.5"
+              paddingY="2"
+              marginBottom="4">
+              <Box marginLeft="4">
+                <Feather name="list" size={30} color="#565656" />
+              </Box>
+              <Box marginLeft="4">
+                <Text fontWeight="600" fontSize="15px">
+                  Histórico
+                </Text>
+                <Text>Histórico de agendamentos</Text>
               </Box>
             </Flex>
           </Pressable>
