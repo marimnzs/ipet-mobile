@@ -7,6 +7,7 @@ import {View, SafeAreaView} from 'react-native';
 import {ref, set, get} from 'firebase/database';
 import {db} from '../../firebase';
 import {useAuthContext} from '../../contexts/AuthContext';
+import {maskCpf} from '../../utils/masks';
 
 interface DataProps {
   navigation: NavigationProp<ParamListBase>;
@@ -101,21 +102,13 @@ export function Data({navigation}: DataProps) {
                   type="text"
                   placeholder="CPF"
                   width="350px"
-                  value={document}
+                  value={maskCpf(document)}
                   onChangeText={setDocument}
                 />
               </Stack>
             </FormControl>
           </Box>
-          <Button
-            width="200px"
-            backgroundColor="#FC822D"
-            borderRadius="20"
-            position="absolute"
-            bottom="24"
-            onPress={handleSaveButtonClick}>
-            Salvar
-          </Button>
+
           <Box position="absolute" bottom="2" width="350px">
             <MenuProfile navigation={navigation} />
           </Box>

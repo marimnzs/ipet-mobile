@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {Box, Flex, Button, Text} from 'native-base';
+import {Box, Flex, Button, Text, useToast} from 'native-base';
 import {
   startOfMonth,
   endOfMonth,
@@ -7,6 +7,7 @@ import {
   format,
   isToday,
   getDay,
+  addMonths,
 } from 'date-fns';
 import {NavigationProp} from '@react-navigation/native';
 import {MenuProfile} from '../components/MenuProfile';
@@ -15,15 +16,28 @@ import {Header} from '../components/Header';
 import {Select} from 'native-base';
 import {ref, get, push, set} from 'firebase/database';
 import {useAuthContext} from '../contexts/AuthContext';
+import {pt} from 'date-fns/locale';
 import db from '../firebase';
 
 interface Servico {
-  animais: string;
+  animais: string[];
   descricao: string;
-  porte: string;
+  porte: string[];
   preco: string;
   servicos: string;
   tempo: string;
+  numeroDeServicos: number;
+}
+
+interface Agendamento {
+  animal: string;
+  dia: string;
+  horario: string;
+  idCliente: string;
+  nomeCliente: string;
+  porte: string;
+  servico: string;
+  status: boolean;
 }
 
 interface ServicoProps {
@@ -38,25 +52,36 @@ interface StoreProfileProps {
 export function StoreProfile({route, navigation}: StoreProfileProps) {
   const {petshopData} = route.params;
   const {user} = useAuthContext();
+  const toast = useToast();
   const [name, setName] = useState('');
   const [servico, setServico] = useState<Servico[]>([]);
+  const [agendamentoAtivos, setAgendamentoAtivos] = useState<Agendamento[]>([]);
   const [servicoSelecionado, setServicoSelecionado] = useState<string>('');
+  const [statusAgendamento, setStatusAgendamento] = useState<boolean>(true);
+  const [statusCancelado, setStatusCancelado] = useState<boolean>(false);
   const [animalSelecionado, setAnimalSelecionado] = useState<string>('');
   const [porteSelecionado, setPorteSelecionado] = useState<string>('');
   const [availableDays, setAvailableDays] = useState<
     {label: string; value: string; isToday: boolean}[]
   >([]);
-  const [animaisAceitos, setAnimaisAceitos] = useState<string>('');
+  const [animais, setAnimais] = useState<string[]>([]);
+  const [portes, setPortes] = useState<string[]>([]);
   const [tempoServico, setTempoServico] = useState<string>('');
   const [valorServico, setValorServico] = useState<string>('');
-  const [portesAceitos, setPortesAceitos] = useState<string>('');
+  const [numeroServico, setNumeroServico] = useState<number>(0);
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedDay, setSelectedDay] = useState('');
 
+  //renderiza apenas o horarios disponiveis
   const generateTimeOptions = (): string[] => {
     const timeOptions: string[] = [];
 
-    if (petshopData.agenda && servicoSelecionado) {
+    if (
+      petshopData.agenda &&
+      servicoSelecionado &&
+      selectedDay &&
+      numeroServico
+    ) {
       const servicoSelecionadoObj = servico.find(
         item => item.servicos === servicoSelecionado,
       );
@@ -88,7 +113,17 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
                 .padStart(2, '0');
               const time = `${formattedHour}:${formattedMinute}`;
 
-              timeOptions.push(time);
+              // Verifique se é possível marcar mais serviços no mesmo horário
+              const servicosNoMesmoHorario = agendamentoAtivos.filter(
+                agendamento =>
+                  agendamento.servico === servicoSelecionado &&
+                  agendamento.dia === selectedDay &&
+                  agendamento.horario === time,
+              );
+
+              if (servicosNoMesmoHorario.length < numeroServico) {
+                timeOptions.push(time);
+              }
             }
           }
         });
@@ -99,7 +134,7 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
   };
 
   const times = generateTimeOptions();
-
+  //pegando nome do cliente
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -120,14 +155,18 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
     fetchData();
   }, [user]);
 
+  //renderiza as datas
   useEffect(() => {
     const currentDate = new Date();
-    const firstDayOfMonth = startOfMonth(currentDate);
-    const lastDayOfMonth = endOfMonth(currentDate);
+    const firstDayOfCurrentMonth = startOfMonth(currentDate);
+    const lastDayOfNextTwoMonths = addMonths(endOfMonth(currentDate), 2);
 
-    const diasTrabalhados: string[] = Object.values(petshopData.agenda)
-      .map((item: any) => item.dias)
-      .flat();
+    const diasTrabalhados: string[] =
+      petshopData && petshopData.agenda
+        ? Object.values(petshopData.agenda)
+            .map((item: any) => item.dias)
+            .flat()
+        : [];
 
     const nomesDiasSemana = [
       'Domingo',
@@ -140,12 +179,14 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
     ];
 
     const diasDisponiveis = eachDayOfInterval({
-      start: firstDayOfMonth,
-      end: lastDayOfMonth,
+      start: currentDate,
+      end: lastDayOfNextTwoMonths,
     }).filter(day => diasTrabalhados.includes(nomesDiasSemana[getDay(day)]));
 
     const daysArray = diasDisponiveis.map(day => ({
-      label: format(day, 'd'),
+      label: `${format(day, 'd / M', {locale: pt})} (${format(day, 'EEEE', {
+        locale: pt,
+      })})`,
       value: format(day, 'dd-MM-yyyy'),
       isToday: isToday(day),
     }));
@@ -153,6 +194,7 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
     setAvailableDays(daysArray);
   }, [petshopData]);
 
+  //get servico e agendamentos do petshop
   useEffect(() => {
     if (!petshopData) {
       return;
@@ -164,10 +206,11 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
     );
 
     get(servicoRef)
-      .then(snapshot => {
-        if (snapshot.exists()) {
-          const data: Record<string, Servico> = snapshot.val();
-          const arrayDeServicos = Object.values(data);
+      .then(servicoSnapshot => {
+        if (servicoSnapshot.exists()) {
+          const servicoData: Record<string, Servico> = servicoSnapshot.val();
+          const arrayDeServicos = Object.values(servicoData);
+
           setServico(arrayDeServicos);
         } else {
           console.log('Nenhum serviço encontrado.');
@@ -176,22 +219,47 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
       .catch(error => {
         console.error('Erro ao buscar serviços:', error);
       });
+
+    const agendamentosRef = ref(
+      db,
+      'IpetClientsWeb/' + petshopData.name + '/agendamentos',
+    );
+
+    get(agendamentosRef)
+      .then(agendamentoSnapshot => {
+        if (agendamentoSnapshot.exists()) {
+          const agendamentoData: Record<string, Agendamento> =
+            agendamentoSnapshot.val();
+          const arrayDeAgendamentos = Object.values(agendamentoData);
+
+          setAgendamentoAtivos(arrayDeAgendamentos);
+        } else {
+          console.log('Nenhum agendamento encontrado.');
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao buscar agendamentos:', error);
+      });
   }, [petshopData]);
 
+  //setando os campos
   useEffect(() => {
     if (servicoSelecionado) {
       const servicoSelecionadoObj = servico.find(
         item => item.servicos === servicoSelecionado,
       );
       if (servicoSelecionadoObj) {
-        setAnimaisAceitos(servicoSelecionadoObj.animais);
+        setAnimais(servicoSelecionadoObj.animais);
         setTempoServico(servicoSelecionadoObj.tempo);
-        setPortesAceitos(servicoSelecionadoObj.porte);
+        setPortes(servicoSelecionadoObj.porte);
         setValorServico(servicoSelecionadoObj.preco);
+        setNumeroServico(servicoSelecionadoObj.numeroDeServicos);
       }
     }
   }, [servicoSelecionado, servico]);
 
+  console.log(numeroServico);
+  //realiza o agendamento
   const handleAgendarClick = () => {
     return new Promise<void>(async (resolve, reject) => {
       if (
@@ -199,14 +267,20 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
         !animalSelecionado ||
         !porteSelecionado ||
         !selectedDay ||
-        !selectedTime
+        !selectedTime ||
+        !statusAgendamento
       ) {
         const error = new Error(
-          'Por favor, preencha todos os campos para prosseguir.',
+          toast.show({
+            title: 'Preencha todos os campos',
+            placement: 'bottom',
+          }),
         );
         reject(error);
         return;
       }
+
+      const idAleatorio = Math.random().toString(36).substring(2);
 
       try {
         const novoAgendamentoRefPetshop = push(
@@ -214,6 +288,7 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
         );
 
         const novoAgendamentoDataPetshop = {
+          id: idAleatorio,
           servico: servicoSelecionado,
           animal: animalSelecionado,
           porte: porteSelecionado,
@@ -221,6 +296,8 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
           horario: selectedTime,
           idCliente: user?.uid,
           nomeCliente: name,
+          status: statusAgendamento,
+          cancelado: statusCancelado,
         };
 
         await set(novoAgendamentoRefPetshop, novoAgendamentoDataPetshop);
@@ -230,6 +307,7 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
         );
 
         const novoAgendamentoDataCliente = {
+          id: idAleatorio,
           servico: servicoSelecionado,
           animal: animalSelecionado,
           porte: porteSelecionado,
@@ -239,6 +317,8 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
           enderecoPetshop: petshopData.endereco,
           valor: valorServico,
           idCliente: user?.uid,
+          status: statusAgendamento,
+          cancelado: statusCancelado,
         };
 
         await set(novoAgendamentoRefCliente, novoAgendamentoDataCliente);
@@ -293,7 +373,9 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
               borderRadius="10px"
               mt={1}
               onValueChange={itemValue => setAnimalSelecionado(itemValue)}>
-              <Select.Item label={animaisAceitos} value={animaisAceitos} />
+              {animais.map((animal, index) => (
+                <Select.Item key={index} label={animal} value={animal} />
+              ))}
             </Select>
           </Box>
           <Box marginBottom="15px">
@@ -306,7 +388,9 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
               borderRadius="10px"
               mt={1}
               onValueChange={itemValue => setPorteSelecionado(itemValue)}>
-              <Select.Item label={portesAceitos} value={portesAceitos} />
+              {portes.map((porte, index) => (
+                <Select.Item key={index} label={porte} value={porte} />
+              ))}
             </Select>
           </Box>
           <Box marginBottom="15px">
@@ -325,7 +409,7 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
               {availableDays.map(day => (
                 <Select.Item
                   key={day.value}
-                  label={day.label}
+                  label={`${day.label}`}
                   value={day.value}
                 />
               ))}
@@ -351,11 +435,7 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
             </Select>
           </Box>
           <Box marginBottom="10px">
-            <Text
-              fontWeight="medium"
-              fontSize="18"
-              color="#565656"
-              textAlign="start">
+            <Text fontWeight="medium" fontSize="18" color="#565656">
               Dados do estabelecimento
             </Text>
           </Box>
