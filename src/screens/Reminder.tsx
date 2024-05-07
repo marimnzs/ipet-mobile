@@ -30,6 +30,8 @@ export function Reminder({navigation}: ReminderProps) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const {user} = useAuthContext();
 
+  //get dos agendamentos já filtrandoo status e cancelado
+
   const fetchAgendamentos = async () => {
     try {
       const clientesRef = ref(

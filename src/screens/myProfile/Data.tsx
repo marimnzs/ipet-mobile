@@ -108,15 +108,7 @@ export function Data({navigation}: DataProps) {
               </Stack>
             </FormControl>
           </Box>
-          <Button
-            width="200px"
-            backgroundColor="#FC822D"
-            borderRadius="20"
-            position="absolute"
-            bottom="24"
-            onPress={handleSaveButtonClick}>
-            Salvar
-          </Button>
+
           <Box position="absolute" bottom="2" width="350px">
             <MenuProfile navigation={navigation} />
           </Box>

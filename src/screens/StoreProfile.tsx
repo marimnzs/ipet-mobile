@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {Box, Flex, Button, Text} from 'native-base';
+import {Box, Flex, Button, Text, useToast} from 'native-base';
 import {
   startOfMonth,
   endOfMonth,
@@ -52,6 +52,7 @@ interface StoreProfileProps {
 export function StoreProfile({route, navigation}: StoreProfileProps) {
   const {petshopData} = route.params;
   const {user} = useAuthContext();
+  const toast = useToast();
   const [name, setName] = useState('');
   const [servico, setServico] = useState<Servico[]>([]);
   const [agendamentoAtivos, setAgendamentoAtivos] = useState<Agendamento[]>([]);
@@ -270,7 +271,10 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
         !statusAgendamento
       ) {
         const error = new Error(
-          'Por favor, preencha todos os campos para prosseguir.',
+          toast.show({
+            title: 'Preencha todos os campos',
+            placement: 'bottom',
+          }),
         );
         reject(error);
         return;
@@ -431,11 +435,7 @@ export function StoreProfile({route, navigation}: StoreProfileProps) {
             </Select>
           </Box>
           <Box marginBottom="10px">
-            <Text
-              fontWeight="medium"
-              fontSize="18"
-              color="#565656"
-              textAlign="start">
+            <Text fontWeight="medium" fontSize="18" color="#565656">
               Dados do estabelecimento
             </Text>
           </Box>

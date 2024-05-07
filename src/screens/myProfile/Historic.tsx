@@ -27,8 +27,7 @@ interface Agendamento {
 }
 
 export function Historic({navigation}: HistoricProps) {
-  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
-  const [feedback, setFeedback] = useState<string>('');
+  const [agendamentos, setAgendamentos] = useState<[string, Agendamento][]>([]);
   const {user} = useAuthContext();
 
   const fetchAgendamentos = async () => {
@@ -41,13 +40,13 @@ export function Historic({navigation}: HistoricProps) {
 
       if (snapshot.exists()) {
         const data: Record<string, Agendamento> = snapshot.val();
-        const listaDeClientes = Object.values(data);
-
-        const agendamentosAtivos = listaDeClientes.filter(agendamento => {
-          return (
-            agendamento.status === false && agendamento.cancelado === false
-          );
-        });
+        const agendamentosAtivos = Object.entries(data).filter(
+          ([_, agendamento]) => {
+            return (
+              agendamento.status === false && agendamento.cancelado === false
+            );
+          },
+        );
 
         setAgendamentos(agendamentosAtivos);
       } else {
@@ -63,7 +62,8 @@ export function Historic({navigation}: HistoricProps) {
   }, [user?.uid]);
 
   const avaliarAgendamento =
-    (agendamento: Agendamento) => async (valor: string) => {
+    (agendamentoArray: string, agendamento: Agendamento) =>
+    async (valor: string) => {
       const clientesRef = ref(
         db,
         'IpetClientsWeb/' + agendamento.nomePetshop + '/agendamentos',
@@ -91,21 +91,25 @@ export function Historic({navigation}: HistoricProps) {
       await set(feedbacksPetshopRef, {
         nota: valor,
         id: agendamentoPetshop[1].id,
+        data: agendamentoPetshop[1].dia,
+        horario: agendamentoPetshop[1].horario,
+        servico: agendamentoPetshop[1].servico,
+        animal: agendamentoPetshop[1].animal,
       });
 
-      // const agendamentosRef = ref(
-      //   db,
-      //   'IpetClientsMobile/' +
-      //     user?.uid +
-      //     '/agendamentos' +
-      //     `/${agendamento.id}`,
-      // );
+      const agendamentosRef = ref(
+        db,
+        'IpetClientsMobile/' +
+          user?.uid +
+          '/agendamentos' +
+          `/${agendamentoArray}`,
+      );
 
-      // await set(agendamentosRef, {
-      //   ...(agendamento as Agendamento),
-      //   avaliado: true,
-      // });
-      // await fetchAgendamentos();
+      await set(agendamentosRef, {
+        ...(agendamento as Agendamento),
+        avaliado: true,
+      });
+      await fetchAgendamentos();
     };
 
   return (
@@ -134,19 +138,19 @@ export function Historic({navigation}: HistoricProps) {
                 marginTop="5">
                 <Box>
                   <Text fontWeight="medium" fontSize="18" color="#565656">
-                    {agendamento.nomePetshop}
+                    {agendamento[1].nomePetshop}
                   </Text>
                   <Text fontSize="12" color="#565656">
-                    Dia: {agendamento.dia}
+                    Dia: {agendamento[1].dia}
                   </Text>
                   <Text fontSize="12" color="#565656">
-                    Horario: {agendamento.horario}
+                    Horario: {agendamento[1].horario}
                   </Text>
                   <Text fontSize="12" color="#565656">
-                    Valor: R${agendamento.valor}
+                    Valor: R${agendamento[1].valor}
                   </Text>
                 </Box>
-                {!agendamento.avaliado && (
+                {!agendamento[1].avaliado && (
                   <Select
                     minWidth="150"
                     accessibilityLabel="Escolha um dia"
@@ -157,7 +161,10 @@ export function Historic({navigation}: HistoricProps) {
                       bg: 'amber.600',
                     }}
                     mt={1}
-                    onValueChange={avaliarAgendamento(agendamento)}>
+                    onValueChange={avaliarAgendamento(
+                      agendamento[0],
+                      agendamento[1],
+                    )}>
                     <Select.Item label="1 - Mal" value="1" />
                     <Select.Item label="2 - Regular" value="2" />
                     <Select.Item label="3 - Bom" value="3" />

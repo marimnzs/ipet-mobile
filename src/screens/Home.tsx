@@ -106,6 +106,10 @@ export function Home({navigation}: HomeProps) {
     const estabelecimentosProximos: Cliente[] = [];
 
     for (const cliente of clientes) {
+      if (!cliente.endereco) {
+        continue;
+      }
+
       const key = Object.keys(cliente.endereco)[0];
       const endereco = cliente.endereco[key];
       if (!endereco?.latitude || !endereco?.longitude) {
@@ -118,7 +122,13 @@ export function Home({navigation}: HomeProps) {
         Number(endereco.latitude),
         Number(endereco.longitude),
       );
-
+      console.log(
+        userSelectedAddress.latitude,
+        userSelectedAddress.longitude,
+        endereco.latitude,
+        endereco.longitude,
+      );
+      console.log(cliente.name, distanciaKm);
       if (distanciaKm <= RAIO_BUSCA_KM) {
         estabelecimentosProximos.push(cliente);
       }
